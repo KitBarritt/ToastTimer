@@ -64,6 +64,18 @@ _KEEPALIVE_T = (
     0b00000000,
 )
 
+# 8×8 perimeter path (28 pixels), clockwise from top-left, logical
+# (unrotated) coordinates. Used by Matrix.show_chase() — WebServer's
+# "running clock" indicator that laps the outer ring once per second while
+# a timer runs with no threshold reached yet.
+_PERIMETER = (
+    [(x, 0) for x in range(MATRIX_SIZE)]
+    + [(MATRIX_SIZE - 1, y) for y in range(1, MATRIX_SIZE - 1)]
+    + [(x, MATRIX_SIZE - 1) for x in range(MATRIX_SIZE - 1, -1, -1)]
+    + [(0, y) for y in range(MATRIX_SIZE - 2, 0, -1)]
+)
+PERIMETER_LEN = len(_PERIMETER)   # 28 on an 8×8 grid
+
 
 class Matrix:
     def __init__(self):
@@ -129,6 +141,21 @@ class Matrix:
         for i in range(MATRIX_SIZE * MATRIX_SIZE):
             self.np[i] = BLACK
         self.np[self._idx(3, 3)] = self._scale(colour)
+        self.np.write()
+
+    def show_chase(self, head, colour, count=4):
+        """Light `count` pixels evenly spaced around the 8×8 perimeter,
+        starting at perimeter index `head` — the "running clock" indicator.
+        Scaled by the configured brightness like fill()/show_char().
+        """
+        n = PERIMETER_LEN
+        spacing = n // count
+        c = self._scale(colour)
+        for i in range(MATRIX_SIZE * MATRIX_SIZE):
+            self.np[i] = BLACK
+        for k in range(count):
+            x, y = _PERIMETER[(head + k * spacing) % n]
+            self.np[self._idx(x, y)] = c
         self.np.write()
 
     def show_char(self, char, colour, rotation=None):

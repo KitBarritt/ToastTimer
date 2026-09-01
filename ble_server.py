@@ -78,6 +78,7 @@ class BleServer:
         asyncio.create_task(self._command_loop())
         asyncio.create_task(self._broadcast_loop())
         asyncio.create_task(self._matrix_loop())
+        asyncio.create_task(self._running_indicator_loop())
         while True:
             await asyncio.sleep(3600)
 
@@ -175,17 +176,18 @@ class BleServer:
             await asyncio.sleep(0.5)
 
     async def _matrix_loop(self):
-        from led_matrix import GREEN, AMBER, RED, BLUE
+        from led_matrix import GREEN, AMBER, RED
         flash_on = True
         while True:
             try:
                 state  = self.timer.get_state()
                 colour = state['colour']
+                ka_level = int(self.config['timer'].get('keepalive_level', 4))
                 if colour == 'off':
                     if state['running']:
-                        self.matrix.dot(BLUE)
+                        pass    # _running_indicator_loop owns this state
                     else:
-                        self.matrix.clear()
+                        self.matrix.show_keepalive(ka_level)
                 elif colour == 'green':
                     self.matrix.fill(GREEN)
                 elif colour == 'amber':
@@ -199,6 +201,25 @@ class BleServer:
             except Exception as e:
                 print('Matrix loop error:', e)
             await asyncio.sleep(0.5)
+
+    async def _running_indicator_loop(self):
+        """'Running clock' chase — see WebServer._running_indicator_loop
+        for the full explanation. Shown only while running with no
+        threshold reached yet; _matrix_loop owns every other state."""
+        import time
+        from led_matrix import WHITE, PERIMETER_LEN
+        step_ms = 1000 // PERIMETER_LEN
+        while True:
+            try:
+                state = self.timer.get_state()
+                if state['colour'] == 'off' and state['running']:
+                    head = (time.ticks_ms() // step_ms) % PERIMETER_LEN
+                    self.matrix.show_chase(head, WHITE)
+                    await asyncio.sleep_ms(step_ms)
+                    continue
+            except Exception as e:
+                print('Running indicator error:', e)
+            await asyncio.sleep_ms(150)
 
     # ── message dispatcher ─────────────────────────────────────────────────
 

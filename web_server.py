@@ -11,6 +11,7 @@ import hashlib
 import binascii
 import json
 import os
+import time
 
 from timer_state import PRESETS
 from device_info import HARDWARE, HAS_BATTERY, HAS_LETTER_MODE
@@ -142,6 +143,7 @@ class WebServer:
     async def start(self):
         asyncio.create_task(self._broadcast_loop())
         asyncio.create_task(self._matrix_loop())
+        asyncio.create_task(self._running_indicator_loop())
         await asyncio.start_server(self._handle_conn, '0.0.0.0', 80)
         print(f'HTTP server listening on {self.ip}:80')
         while True:
@@ -166,7 +168,7 @@ class WebServer:
 
     async def _matrix_loop(self):
         """Update the LED matrix to reflect the current timer colour."""
-        from led_matrix import GREEN, AMBER, RED, BLUE, WHITE
+        from led_matrix import GREEN, AMBER, RED, WHITE
         flash_on = True
         ip_seq          = []   # IP scroll: list of chars + None (blank) entries
         ip_idx          = 0    # current position in ip_seq
@@ -228,7 +230,7 @@ class WebServer:
 
                     if colour == 'off':
                         if state['running']:
-                            self.matrix.dot(BLUE)
+                            pass    # _running_indicator_loop owns this state
                         else:
                             self.matrix.show_keepalive(ka_level)
                     elif colour == 'green':
@@ -245,6 +247,31 @@ class WebServer:
                 print('Matrix loop error:', e)
 
             await asyncio.sleep(0.5)
+
+    async def _running_indicator_loop(self):
+        """'Running clock' chase — 4 white dots doing one lap of the outer
+        ring per second — shown only while the timer is running and no
+        threshold has been reached yet (colour == 'off').
+
+        Runs on its own fast tick so the motion is smooth; _matrix_loop
+        (0.5 s tick) owns every other state and repaints within half a
+        second of this state ending. A moving 4-pixel ring also draws more
+        current than a single static dot, which helps keep a USB power
+        bank awake while a timer is running unattended.
+        """
+        from led_matrix import WHITE, PERIMETER_LEN
+        step_ms = 1000 // PERIMETER_LEN   # ≈ one lap per second
+        while True:
+            try:
+                state = self.timer.get_state()
+                if state['colour'] == 'off' and state['running']:
+                    head = (time.ticks_ms() // step_ms) % PERIMETER_LEN
+                    self.matrix.show_chase(head, WHITE)
+                    await asyncio.sleep_ms(step_ms)
+                    continue
+            except Exception as e:
+                print('Running indicator error:', e)
+            await asyncio.sleep_ms(150)   # idle poll while not our turn
 
     # ── connection handler ─────────────────────────────────────────────────
 
