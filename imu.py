@@ -8,12 +8,13 @@ Hardware: Waveshare ESP32-S3-Matrix
 Quirk: CTRL7 must enable BOTH accel (bit 0) AND gyro (bit 1) = 0x03,
 otherwise the data-ready flag never sets and all registers read zero.
 
-Returns: 'vertical' | 'left' | 'right' | 'unknown'
+Returns: 'vertical' | 'inverted' | 'left' | 'right' | 'unknown'
 
 Axis → orientation mapping (confirmed by physical testing):
-  Y negative dominant → 'left'   (left side down)
-  Y positive dominant → 'right'  (right side down)
-  X or Z dominant     → 'vertical' (upright / any other face down)
+  Y negative dominant    → 'left'     (left side down)
+  Y positive dominant    → 'right'    (right side down)
+  X dominant & negative  → 'inverted' (upside-down → tap-cycle mode; ax ≈ -1 g)
+  X or Z dominant (else) → 'vertical' (upright / any other face down; ax ≈ +1 g)
 
 Raw count scale: 1 g ≈ 1060 counts (as measured on this board).
 AXIS_THRESHOLD = 600 ≈ 0.56 g — rejects ambiguous near-45° positions.
@@ -73,8 +74,37 @@ def get_orientation():
         if aay >= aax and aay >= aaz:
             # Y axis runs left/right on this board
             return 'left' if ay < 0 else 'right'
+        if aax >= aaz and ax < 0:
+            # X is the vertical axis on this board: ax ≈ +1 g upright,
+            # ≈ -1 g upside-down (measured ~±1000 counts).
+            return 'inverted'
         return 'vertical'      # X or Z dominant → upright
 
     except Exception as e:
         print('IMU error:', e)
         return 'unknown'
+
+
+class TapReader:
+    """Holds the QMI8658 open for continuous accelerometer sampling.
+
+    Used by tap_mode.py (upside-down 'traffic light' mode). Same register
+    setup as get_orientation() — CTRL7 must be 0x03 or the data-ready flag
+    never sets. read() returns a signed (ax, ay, az) count triple;
+    1 g ≈ 1060 counts on this board.
+    """
+
+    def __init__(self):
+        self.i2c = machine.SoftI2C(sda=machine.Pin(_SDA),
+                                   scl=machine.Pin(_SCL),
+                                   freq=400_000)
+        self.i2c.writeto_mem(_ADDR, _CTRL1, b'\x40')   # address auto-increment
+        self.i2c.writeto_mem(_ADDR, _CTRL2, b'\x60')   # 1 kHz ODR, ±2 g
+        self.i2c.writeto_mem(_ADDR, _CTRL7, b'\x03')   # accel + gyro on (both needed)
+        time.sleep_ms(20)
+
+    def read(self):
+        raw = self.i2c.readfrom_mem(_ADDR, _AX_L, 6)
+        return (_s16(raw[0], raw[1]),
+                _s16(raw[2], raw[3]),
+                _s16(raw[4], raw[5]))

@@ -180,6 +180,7 @@ class WebServer:
             try:
                 state  = self.timer.get_state()
                 colour = state['colour']
+                ka_level = int(self.config['timer'].get('keepalive_level', 4))
 
                 if self._clients:
                     no_client_ticks = 0
@@ -208,7 +209,7 @@ class WebServer:
                     if ip_seq:
                         ch = ip_seq[ip_idx]
                         if ch is None:
-                            self.matrix.clear()
+                            self.matrix.show_keepalive(ka_level)
                         else:
                             _b = self.matrix.brightness
                             self.matrix.brightness = ip_brightness
@@ -229,7 +230,7 @@ class WebServer:
                         if state['running']:
                             self.matrix.dot(BLUE)
                         else:
-                            self.matrix.clear()
+                            self.matrix.show_keepalive(ka_level)
                     elif colour == 'green':
                         self.matrix.fill(GREEN)
                     elif colour == 'amber':

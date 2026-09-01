@@ -93,6 +93,37 @@ select.field{width:100%;padding:.45rem .6rem;background:#111827;border:1px solid
       oninput="setBrightness(this.value)">
   </div>
 
+  <!-- Idle display / power-bank keep-alive -->
+  <div class="card">
+    <h2>Idle Display &amp; Keep-Alive</h2>
+    <label>Keep-alive &ldquo;T&rdquo; level: <span id="kaVal">4</span> / 255</label>
+    <input type="range" id="kaSlider" min="0" max="32" value="4"
+      oninput="setKeepalive(this.value)" onchange="saveTimerExtras()">
+    <p style="font-size:.75rem;color:#6b7280;margin:.4rem 0 .9rem;line-height:1.4">
+      A dim &ldquo;T&rdquo; shown whenever the display would otherwise be blank,
+      drawing just enough current to stop a USB power bank switching itself off.
+      Set to 0 for a fully blank idle screen.
+    </p>
+    <label>Tap threshold (lower = more sensitive): <span id="tapThrVal">400</span></label>
+    <input type="range" id="tapThrSlider" min="100" max="1200" step="25" value="400"
+      oninput="document.getElementById('tapThrVal').textContent=this.value"
+      onchange="saveTimerExtras()">
+    <div class="row" style="margin-top:.9rem">
+      <label for="tapAxisSel">Tap axis</label>
+      <select class="field" id="tapAxisSel" style="flex:2" onchange="saveTimerExtras()">
+        <option value="x">X &mdash; top face (default)</option>
+        <option value="y">Y</option>
+        <option value="z">Z</option>
+        <option value="mag">Magnitude</option>
+      </select>
+    </div>
+    <p style="font-size:.75rem;color:#6b7280;margin-top:.6rem;line-height:1.4">
+      Used when the cube is booted <strong>upside-down</strong> for tap-cycle
+      (traffic-light) mode: tap the top face to step off &rarr; green &rarr;
+      amber &rarr; red.
+    </p>
+  </div>
+
   <!-- WiFi networks -->
   <div class="card">
     <h2 data-i18n="h_wifi">WiFi Networks
@@ -315,6 +346,13 @@ function applyConfig(){
   const b = Math.round((cfg.timer?.brightness ?? 0.6) * 100);
   document.getElementById('brightSlider').value = b;
   document.getElementById('brightVal').textContent = b;
+  const ka = cfg.timer?.keepalive_level ?? 4;
+  document.getElementById('kaSlider').value = ka;
+  document.getElementById('kaVal').textContent = ka;
+  const thr = cfg.timer?.tap_threshold ?? 400;
+  document.getElementById('tapThrSlider').value = thr;
+  document.getElementById('tapThrVal').textContent = thr;
+  document.getElementById('tapAxisSel').value = cfg.timer?.tap_axis ?? 'x';
   document.getElementById('apSsid').value = cfg.wifi?.ap_ssid ?? 'TimerCube';
   document.getElementById('apPass').value = cfg.wifi?.ap_password ?? 'toastmaster';
   renderNetList();
@@ -325,6 +363,19 @@ function setBrightness(val){
   cfg.timer = cfg.timer || {};
   cfg.timer.brightness = +val / 100;
   send({type:'set_brightness', brightness: +val / 100});
+}
+
+function setKeepalive(val){
+  document.getElementById('kaVal').textContent = val;
+}
+
+// Persist the idle/tap settings (fires on slider/select release, not every tick).
+function saveTimerExtras(){
+  cfg.timer = cfg.timer || {};
+  cfg.timer.keepalive_level = +document.getElementById('kaSlider').value;
+  cfg.timer.tap_threshold   = +document.getElementById('tapThrSlider').value;
+  cfg.timer.tap_axis        = document.getElementById('tapAxisSel').value;
+  send({type:'save_config', config:{timer: cfg.timer}});
 }
 
 // ── Network list ──────────────────────────────────────────────────────────────
