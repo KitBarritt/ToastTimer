@@ -7,6 +7,7 @@
     "wifi_manager.py",
     "led_matrix.py",
     "imu.py",
+    "tap_mode.py",
     "device_info.py",
     "usb_server.py",
     "ble_server.py",

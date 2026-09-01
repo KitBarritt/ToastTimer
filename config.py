@@ -10,6 +10,9 @@ _DEFAULTS = {
     },
     'timer': {
         'brightness': 0.6,
+        'keepalive_level': 4,     # raw 0-255 level for the dim idle 'T' that keeps a USB power bank awake (0 = blank)
+        'tap_threshold': 400,     # high-pass deviation (counts) that registers as a tap in upside-down tap-cycle mode
+        'tap_axis': 'x',          # accelerometer axis for tap detection: 'x' | 'y' | 'z' | 'mag' (X is vertical on this board)
     },
     'language': 'en',
 }

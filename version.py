@@ -1,4 +1,4 @@
-VERSION       = "2.1.9"
-VERSION_DATE  = "2 July 2026"
+VERSION       = "2.2.0"
+VERSION_DATE  = "1 September 2026"
 GITHUB_REPO   = "KitBarritt/ToastTimer"
 GITHUB_BRANCH = "main"

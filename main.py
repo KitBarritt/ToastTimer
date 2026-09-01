@@ -47,6 +47,10 @@ async def main():
         # BLE mode immediately
         await _run_ble(config, matrix)
 
+    elif orientation == 'inverted':
+        # Upside-down: standalone tap-cycle "traffic light" mode, no networking
+        await _run_tap(config, matrix)
+
     else:
         # Upright / unknown: WiFi → AP
         _set_hostname()
@@ -102,6 +106,11 @@ async def _run_ble(config, matrix):
     from ble_server import BleServer
     server = BleServer(config, matrix)
     await server.run()
+
+
+async def _run_tap(config, matrix):
+    from tap_mode import run
+    await run(config, matrix)
 
 
 async def _run_ap(config, matrix):

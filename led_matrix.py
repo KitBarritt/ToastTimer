@@ -49,6 +49,21 @@ _FONT = {
     'B': [6, 5, 6, 5, 6],   # ##. / #.# / ##. / #.# / ##.
 }
 
+# Keep-alive 'T' — 8-row bitmap, MSB = left column, row 0 = top.
+# Drawn at a raw level by Matrix.show_keepalive(): a dim idle display that
+# pulls just enough current to stop a USB power bank auto-switching-off.
+# Same shape as powerbank_test.py so a level tuned there carries straight over.
+_KEEPALIVE_T = (
+    0b00000000,
+    0b01111110,   # top bar, cols 1-6
+    0b00011000,   # stem, cols 3-4
+    0b00011000,
+    0b00011000,
+    0b00011000,
+    0b00011000,
+    0b00000000,
+)
+
 
 class Matrix:
     def __init__(self):
@@ -130,6 +145,26 @@ class Matrix:
         self._draw_char(char, colour, x_offset=2)
         self.np.write()
         self._extra_rot = None
+
+    def show_keepalive(self, level):
+        """Dim 'T' at a raw 0–255 level, bypassing the brightness curve.
+
+        Idle display used across all modes so the matrix is never fully dark
+        on battery — the small constant current stops a USB power bank from
+        switching itself off.  level 0 → blank.
+        """
+        lvl = max(0, min(255, int(level)))
+        if lvl == 0:
+            self.clear()
+            return
+        px = (lvl, lvl, lvl)
+        for i in range(MATRIX_SIZE * MATRIX_SIZE):
+            self.np[i] = BLACK
+        for y, bits in enumerate(_KEEPALIVE_T):
+            for x in range(MATRIX_SIZE):
+                if bits & (1 << (7 - x)):
+                    self.np[self._idx(x, y)] = px
+        self.np.write()
 
     def show_two_chars(self, c1, c2, colour1, colour2):
         """Show two characters side by side (cols 0–2 and 4–6)."""
