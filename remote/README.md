@@ -44,7 +44,7 @@ mpremote connect COMx reset
 
 | LED | Meaning |
 |---|---|
-| red → green → blue at power-up | start-up test. If the order is wrong set `LED_ORDER = 'RGB'` |
+| red → green → blue at power-up | start-up test. The default `LED_ORDER = 'RGB'` is right for the tested board; if red and green come out swapped on yours, set `'GRB'` |
 | blue blinking | scanning / connecting |
 | faint white | connected, cube colour `off` |
 | green / amber / red | the cube's current colour (`flash` blinks red in step) |

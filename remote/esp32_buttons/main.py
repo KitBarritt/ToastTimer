@@ -23,7 +23,7 @@ from tc_remote import TimerCubeLink
 
 # ── configuration ─────────────────────────────────────────────────────────
 CUBE_NAME = 'TimerCube'
-DEBUG     = True              # print link progress; set False once it works
+DEBUG     = False              # print link progress; set False once it works
 
 # (GPIO, colour sent) — wire each button between the pin and GND
 BUTTONS = (
@@ -36,7 +36,7 @@ BUTTONS = (
 DEBOUNCE_MS = 20              # a change must still hold after this long to count
 
 LED_PIN    = 21               # ESP32-S3-Zero on-board WS2812
-LED_ORDER  = 'GRB'            # wire order; if the start-up test isn't red→green→blue, try 'RGB'
+LED_ORDER  = 'RGB'            # this ESP32-S3-Zero's LED is RGB; if the start-up test isn't red→green→blue, try 'GRB'
 LED_BRIGHT = 0.15             # the on-board LED is very bright
 
 # (R, G, B) — same colours the cube's matrix uses
