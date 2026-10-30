@@ -47,6 +47,9 @@ _CONNECT_MS       = 6000    # give up on a connection attempt after this
 _STATE_TIMEOUT_MS = 8000    # cube broadcasts state every 0.5 s; silence this long = dead link
 _WANT_MTU         = 256     # bigger MTU → a state message fits in one notification
 _MAX_LINE         = 1024    # longer partial lines are not state messages — discard them
+_WRITE_CHUNK      = 20      # the cube's RX characteristic buffer is MicroPython's default
+                            # 20 bytes: a longer write is acked but truncated, so the line
+                            # never completes. ble.html sends 20-byte pieces too.
 
 
 def _adv_name(adv):
@@ -135,13 +138,12 @@ class TimerCubeLink:
             return False
         data = (json.dumps(obj) + '\n').encode()
         async with self._wlock:
-            step = max(20, self._mtu - 3)            # 3-byte ATT header
-            for i in range(0, len(data), step):
+            for i in range(0, len(data), _WRITE_CHUNK):
                 if self._conn is None:
                     return False
                 self._write_evt.clear()
                 try:
-                    self._ble.gattc_write(self._conn, self._rx, data[i:i + step], 1)
+                    self._ble.gattc_write(self._conn, self._rx, data[i:i + _WRITE_CHUNK], 1)
                 except OSError as e:
                     self._log('write error:', e)
                     return False
