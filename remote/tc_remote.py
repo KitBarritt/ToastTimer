@@ -239,6 +239,8 @@ class TimerCubeLink:
                 try:
                     d = json.loads(line.decode())
                     if isinstance(d, dict) and d.get('type') == 'state':
+                        if self.state is None or d.get('colour') != self.state.get('colour'):
+                            self._log('cube colour:', d.get('colour'))
                         self.state = d
                         last = time.ticks_ms()
                 except Exception:
@@ -288,7 +290,9 @@ class TimerCubeLink:
                 break
             line = buf[:i]
             buf = buf[i + 1:]
-            if b'"state"' in line[:24]:
+            # MicroPython dicts are not insertion-ordered, so "type" can sit
+            # anywhere in the line; _session() confirms the type after parsing.
+            if b'"state"' in line:
                 self._state_line = line
                 self._state_evt.set()
         if len(buf) > _MAX_LINE:                      # speakers/config/presets etc.
